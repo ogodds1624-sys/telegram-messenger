@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="color-scheme" content="light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Chats</title>
+  <style>
+    :root {
+      --blue: #3390ec;
+      --ink: #1c1c1e;
+      --muted: #8e8e93;
+      --line: #e5e5ea;
+      --search: #f2f2f7;
+      --out: #effdde;
+      --wall: #d7e7f3;
+      --tick: #5eaf6e;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #e6e6eb;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    button, input { font: inherit; color: inherit; }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .app {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      right: auto;
+      width: min(440px, 100%);
+      height: min(956px, 100vh);
+      height: min(956px, 100dvh);
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      background: #fff;
+    }
+
+    @media (min-width: 441px) {
+      .app {
+        border-radius: 36px;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.18);
+      }
+    }
+
+    .home, .conversation {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #fff;
+      transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    .conversation {
+      transform: translate3d(100%, 0, 0);
+      background: var(--wall);
+      pointer-events: none;
+    }
+
+    .app.open .conversation {
+      transform: translate3d(0, 0, 0);
+      pointer-events: auto;
+    }
+
+    .app.open .home,
+    .app.adding .home,
+    .app.profile .home {
+      transform: translate3d(-22%, 0, 0);
+      pointer-events: none;
+    }
+
+    .new-contact,
+    .edit-profile {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #fff;
+      transform: translate3d(100%, 0, 0);
+      transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+      pointer-events: none;
+    }
+
+    .app.adding .new-contact,
+    .app.profile .edit-profile {
+      transform: translate3d(0, 0, 0);
+      pointer-events: auto;
+    }
+
+    .nc-head {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      border-bottom: 0;
+      background: #fff;
+    }
+
+    .nc-head h1 {
+      margin: 0;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .nc-form {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 28px 16px calc(24px + var(--safe-b));
+    }
+
+    .nc-photo {
+      width: 118px;
+      height: 118px;
+      margin: 12px 0 18px;
+      border: 2px dashed #c7c7cc;
+      border-radius: 50%;
+      background: #f3f3f5;
+      color: #8e8e93;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nc-photo img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .nc-photo.has svg { opacity: 0; }
+
+    .nc-form input[type="text"],
+    .nc-form input[type="tel"] {
+      width: 100%;
+      height: 52px;
+      border: 0;
+      border-radius: 14px;
+      background: #f2f2f7;
+      padding: 0 16px;
+      font-size: 17px;
+    }
+
+    .nc-form input::placeholder { color: #8e8e93; }
+
+    .nc-field {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: #8e8e93;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .nc-create {
+      width: 100%;
+      height: 52px;
+      margin-top: 8px;
+      border: 0;
+      border-radius: 14px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .nc-create:active { filter: brightness(0.96); }
+
+    .header {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      min-height: 52px;
+      padding: calc(8px + var(--safe-t)) 12px 8px;
+      background: #fff;
+    }
+
+    .header h1 {
+      grid-column: 2;
+      margin: 0;
+      text-align: center;
+      font-size: 17px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .edit-btn {
+      grid-column: 1;
+      justify-self: start;
+      height: 34px;
+      padding: 0 14px;
+      border: 1px solid #e4e4e8;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+      color: #111;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .edit-btn:active { background: #f2f2f7; }
+    .edit-btn[hidden] { display: none; }
+
+    .icon-pill {
+      grid-column: 3;
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 40px;
+      padding: 0 14px;
+      border: 1px solid #e4e4e8;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    }
+
+    .icon-pill[hidden] { display: none; }
+
+    .icon-pill button {
+      width: 36px;
+      height: 32px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #1c1c1e;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .icon-pill button:active { background: #ececef; }
+
+    .nav-plus {
+      grid-column: 3;
+      justify-self: end;
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 20px;
+      background: transparent;
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .nav-plus:active { background: #e8f3fd; }
+    .nav-plus[hidden] { display: none; }
+
+    .search {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 16px 6px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 12px;
+      background: var(--search);
+      color: var(--muted);
+    }
+
+    .search svg { flex: 0 0 auto; }
+
+    .search input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: none;
+      background: transparent;
+      font-size: 16px;
+      color: var(--ink);
+    }
+
+    .search input::placeholder { color: var(--muted); }
+
+    .panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+    .panel.on { display: flex; }
+
+    .scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll::-webkit-scrollbar { width: 0; height: 0; }
+
+    .chat-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 68px minmax(0, 1fr);
+      align-items: center;
+      gap: 2px;
+      padding: 6px 12px 0 8px;
+      border: 0;
+      background: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .chat-row.picking { grid-template-columns: 36px 56px minmax(0, 1fr); }
+
+    .check {
+      width: 22px;
+      height: 22px;
+      margin-left: 4px;
+      border: 1.5px solid #c8c8cc;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+    }
+
+    .chat-row.selected .check {
+      border-color: var(--blue);
+      background: var(--blue);
+    }
+
+    .chat-row.selected .check::after {
+      content: "";
+      width: 5px;
+      height: 9px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: translateY(-1px) rotate(45deg);
+    }
+
+    .chat-row:active { background: #f4f4f5; }
+
+    .edit-bar {
+      display: none;
+      flex-shrink: 0;
+      justify-content: flex-end;
+      padding: 8px 16px;
+      border-top: 0.5px solid var(--line);
+      background: #fff;
+    }
+
+    .app.editing .edit-bar { display: flex; }
+
+    #delete-chats {
+      border: 0;
+      background: transparent;
+      color: #ff3b30;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 6px 2px;
+    }
+
+    #delete-chats:disabled { color: #c7c7cc; }
+
+    .avatar {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 6px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .avatar.lg {
+      width: 64px;
+      height: 64px;
+      margin: 0;
+      font-size: 26px;
+      background: var(--blue);
+    }
+
+    .chat-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1px;
+      padding: 4px 0 10px;
+      border-bottom: 0.5px solid var(--line);
+    }
+
+    .chat-main > .name { flex: 0 1 auto; }
+
+    .topline, .botline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .botline { margin-top: 2px; }
+
+    .name, .preview {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .name { font-size: 16px; font-weight: 600; }
+
+    .when {
+      flex-shrink: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .when.hot { color: var(--blue); }
+
+    .preview, .sub {
+      display: block;
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+    .sub.online { color: var(--blue); }
+
+    .contact-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+    }
+
+    .contact-row { grid-template-columns: 64px minmax(0, 1fr); padding-right: 22px; }
+    .contact-row .avatar {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto;
+      font-size: 16px;
+    }
+
+    .section-letter {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 8px 22px 4px 18px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #8e8e93;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .invite-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr);
+      align-items: center;
+      padding: 8px 22px 8px 8px;
+      border: 0;
+      background: #fff;
+      color: var(--blue);
+      text-align: left;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .invite-row:active { background: #f4f4f5; }
+
+    .invite-ico {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: #e8f3fd;
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+    }
+
+    .alpha {
+      position: absolute;
+      top: 8px;
+      right: 1px;
+      bottom: 8px;
+      width: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+    }
+
+    .alpha button {
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.25;
+      padding: 1px 0;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: calc(92px + var(--safe-b));
+      transform: translateX(-50%);
+      max-width: calc(100% - 32px);
+      padding: 8px 14px;
+      border-radius: 14px;
+      background: rgba(28, 28, 30, 0.9);
+      color: #fff;
+      font-size: 14px;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .toast[hidden] { display: none; }
+
+    .badge {
+      flex-shrink: 0;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 11px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      display: grid;
+      place-items: center;
+    }
+
+    .empty, .blank { color: var(--muted); }
+
+    .empty {
+      margin: 28px 16px;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    #panel-calls { align-items: center; justify-content: center; }
+
+    .blank { text-align: center; padding: 24px; }
+    .blank h2 { margin: 0 0 6px; color: var(--ink); font-size: 18px; font-weight: 650; }
+    .blank p { margin: 0; font-size: 15px; }
+
+    .home.setmode .header { display: none; }
+
+    #panel-settings { background: #f2f2f7; }
+
+    .settings {
+      background: #f2f2f7;
+      padding: calc(10px + var(--safe-t)) 16px 18px;
+    }
+
+    .set-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .set-qr, .set-edit {
+      border: 0;
+      background: #e8e8ed;
+      color: #111;
+    }
+
+    .set-qr {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .set-edit {
+      height: 34px;
+      padding: 0 16px;
+      border-radius: 17px;
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .set-hero { text-align: center; padding: 10px 8px 18px; }
+
+    .set-avatar {
+      width: 112px;
+      height: 112px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(160deg, #ffe27a 0%, #ffb15a 52%, #ff8a4c 100%) center / cover no-repeat;
+    }
+
+    .set-hero h2 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 26px;
+      letter-spacing: -0.4px;
+    }
+
+    .set-star { color: var(--blue); font-size: 18px; line-height: 1; }
+    .set-emoji { font-size: 22px; }
+
+    .set-sub {
+      margin: 6px 0 0;
+      color: #8e8e93;
+      font-size: 15px;
+    }
+
+    .set-card {
+      background: #fff;
+      border-radius: 16px;
+      margin: 0 0 12px;
+      overflow: hidden;
+    }
+
+    .set-link, .set-line {
+      width: 100%;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border: 0;
+      border-bottom: 0.5px solid #ececef;
+      background: #fff;
+      text-align: left;
+      font-size: 16px;
+      color: var(--ink);
+    }
+
+    .set-card > :last-child { border-bottom: 0; }
+
+    .set-link { color: var(--blue); font-weight: 560; }
+
+    .set-link svg, .set-ico { flex: 0 0 auto; }
+
+    .set-ico {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+    }
+
+    .set-ico.red { background: #ff5b4f; }
+    .set-ico.blue { background: #3390ec; }
+    .set-ico.green { background: #34c759; }
+    .set-ico.orange { background: #ff9f0a; }
+    .set-ico.sky { background: #5ac8fa; }
+    .set-ico.leaf { background: #30d158; }
+    .set-ico.violet { background: #7b61ff; }
+    .set-ico.gray { background: #8e8e93; }
+
+    .set-label { flex: 1; min-width: 0; }
+
+    .set-side {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      color: #8e8e93;
+      font-size: 17px;
+    }
+
+    .set-chev { color: #c7c7cc; font-size: 22px; line-height: 1; }
+
+    .set-line.danger { color: #ff3b30; font-weight: 650; }
+
+    .switch {
+      width: 50px;
+      height: 30px;
+      border-radius: 15px;
+      background: #e5e5ea;
+      position: relative;
+      flex: 0 0 50px;
+    }
+
+    .switch b {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+      transition: transform 0.2s ease;
+    }
+
+    .set-line.on .switch { background: #34c759; }
+    .set-line.on .switch b { transform: translateX(20px); }
+
+    .dock {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px calc(8px + var(--safe-b));
+      background: #fff;
+    }
+
+    .tabs {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: stretch;
+      height: 64px;
+      padding: 4px;
+      border: 1px solid #ececef;
+      border-radius: 34px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .tabs button {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      border-radius: 26px;
+      background: transparent;
+      color: #1c1c1e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      padding: 2px 0 4px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .tabs button.on {
+      background: #f2f2f4;
+      color: var(--blue);
+    }
+
+    .tabs button[data-tab="contacts"],
+    .tabs button[data-tab="calls"],
+    .tabs button[data-tab="chats"] { color: #111; }
+    .tabs button[data-tab="contacts"].on,
+    .tabs button[data-tab="calls"].on,
+    .tabs button[data-tab="chats"].on { color: var(--blue); background: #f2f2f4; }
+
+    .tabs button svg { display: block; }
+
+    .tabs button .b-back,
+    .tabs button .b-front { fill: currentColor; }
+    .tabs button.on .b-back { fill: #2b8fe6; }
+    .tabs button.on .b-front { fill: #3aa3f5; }
+
+    .set-face {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, #d7b4ff 0%, #9b4dff 58%, #7b3dff 100%);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .chat-ico {
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+
+    .tab-count {
+      display: none;
+      position: absolute;
+      top: -6px;
+      right: -10px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 8px;
+      background: #ff3b30;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+    }
+
+    .tab-count.show { display: block; }
+
+    .dock-search {
+      width: 62px;
+      height: 62px;
+      flex: 0 0 62px;
+      border: 1px solid #ececef;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      color: #111;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .dock-search:active { background: #f4f4f5; }
+
+    .chat-header.nc-head {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      gap: 0;
+      border-bottom: 0;
+      background: #fff;
+    }
+
+    .chat-header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      padding: calc(4px + var(--safe-t)) 10px 6px 2px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(18px);
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .back {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .who {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .who .avatar { width: 40px; height: 40px; margin: 0; font-size: 16px; flex: 0 0 40px; }
+
+    .who-text { min-width: 0; }
+
+    .who-text strong, .status {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .who-text strong { font-size: 16px; }
+
+    .status { margin-top: 1px; font-size: 13px; color: var(--muted); font-weight: 400; }
+    .status.online { color: var(--blue); }
+
+    #thread {
+      flex: 1;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 8px 0 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #thread::-webkit-scrollbar { width: 0; height: 0; }
+
+    .day {
+      width: fit-content;
+      max-width: calc(100% - 24px);
+      margin: 8px auto;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: rgba(70, 90, 110, 0.35);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .msg {
+      display: flex;
+      padding: 0 8px;
+      margin-top: 8px;
+      max-width: 100%;
+    }
+
+    .msg.grouped { margin-top: 2px; }
+    .msg.out { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 80%;
+      padding: 6px 8px 5px 10px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+      font-size: 16px;
+      line-height: 1.28;
+      overflow-wrap: anywhere;
+    }
+
+    .msg.in .bubble { border-bottom-left-radius: 5px; }
+    .msg.out .bubble { background: var(--out); border-bottom-right-radius: 5px; }
+
+    .text { white-space: pre-wrap; }
+
+    .meta {
+      float: right;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin: 7px 0 -3px 10px;
+      color: #8d9aa3;
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      position: relative;
+      top: 3px;
+    }
+
+    .msg.out .meta { color: var(--tick); }
+
+    .ticks { display: inline-flex; }
+
+    .composer {
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 8px 10px calc(8px + var(--safe-b));
+      background: #fff;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+    }
+
+    #msg {
+      flex: 1;
+      min-width: 0;
+      height: 42px;
+      border: 0;
+      outline: none;
+      border-radius: 21px;
+      background: var(--search);
+      padding: 0 16px;
+      font-size: 16px;
+    }
+
+    #send {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--blue);
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    #send svg { display: block; margin-left: 2px; }
+    #send:active { transform: scale(0.94); }
+
+    @media (max-width: 360px) {
+      .avatar { width: 46px; height: 46px; font-size: 18px; }
+      .chat-row { grid-template-columns: 60px minmax(0, 1fr); }
+      .chat-row.picking { grid-template-columns: 32px 48px minmax(0, 1fr); }
+      .bubble { max-width: 84%; }
+      .tabs button { font-size: 10px; }
+      .dock-search { width: 54px; height: 54px; flex-basis: 54px; }
+      .tabs { height: 58px; }
+    }
+
+    @media (max-height: 520px) {
+      .avatar { width: 40px; height: 40px; }
+      .chat-row { grid-template-columns: 52px minmax(0, 1fr); padding-top: 2px; }
+      .chat-row.picking { grid-template-columns: 30px 44px minmax(0, 1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .home, .conversation { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <section class="home" id="home">
+      <header class="header">
+        <button type="button" class="edit-btn" id="edit-btn" aria-pressed="false">Edit</button>
+        <h1 id="screen-title">Chats</h1>
+        <div class="icon-pill" id="icon-pill">
+          <button type="button" id="add-btn" aria-label="Add contact">
+            <svg width="23" height="23" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="7.15" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-dasharray="2.55 2.05"/>
+              <path d="M12 8.55v6.9M8.55 12h6.9" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button type="button" id="compose-btn" aria-label="New message">
+            <svg width="23" height="23" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.1 4.9h8.2M18.7 8.4v7.7a2.7 2.7 0 0 1-2.7 2.7H7.1a2.7 2.7 0 0 1-2.7-2.7V7.6a2.7 2.7 0 0 1 2.7-2.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M8.2 15.8 19.6 4.4" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="nav-plus" id="contact-add" hidden aria-label="New contact">
+          <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9.5" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M4.2 18.2c.6-2.8 2.6-4.2 5.3-4.2 1.1 0 2.1.3 2.9.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M17 12.5v6M14 15.5h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="panel" id="panel-contacts" data-panel="contacts">
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.24 4.25-1.4 1.4-4.25-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/>
+          </svg>
+          <input id="contact-search" type="search" placeholder="Search" enterkeyhint="search" autocomplete="off" aria-label="Search contacts" />
+        </label>
+        <div class="contact-wrap">
+          <div class="scroll" id="contact-list"></div>
+          <nav class="alpha" id="alpha-index" aria-label="Jump to letter"></nav>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-calls" data-panel="calls">
+        <div class="blank">
+          <h2>No recent calls</h2>
+          <p>Calls you place will show up here.</p>
+        </div>
+      </div>
+
+      <div class="panel on" id="panel-chats" data-panel="chats">
+        <label class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.24 4.25-1.4 1.4-4.25-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/>
+          </svg>
+          <input id="search" type="search" placeholder="Search" enterkeyhint="search" autocomplete="off" aria-label="Search chats" />
+        </label>
+        <div class="scroll" id="chat-list" role="list"></div>
+      </div>
+
+      <div class="panel" id="panel-settings" data-panel="settings">
+        <div class="scroll settings" id="settings-scroll">
+          <div class="set-top">
+            <button type="button" class="set-qr" id="set-qr" aria-label="QR code">
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm4 0h2v2h-2zm-4 4h2v2h-2zm2 2h2v2h-2zm2-2h2v6h-2zm-6 2h2v2h-2z"/></svg>
+            </button>
+            <button type="button" class="set-edit" id="set-edit">Edit</button>
+          </div>
+          <div class="set-hero">
+            <div class="set-avatar" id="set-avatar" aria-hidden="true">MA</div>
+            <h2><span id="set-name">MTT Analysis</span> <span class="set-emoji" id="set-emoji"></span><span class="set-star" aria-hidden="true">★</span></h2>
+            <p class="set-sub" id="set-sub">+233 53 182 8096 · @mtt_analysis</p>
+          </div>
+          <div class="set-card">
+            <button type="button" class="set-link" data-act="emoji">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 13.5c.8 1.4 2 2.2 3.5 2.2s2.7-.8 3.5-2.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg>
+              Set Emoji Status
+            </button>
+            <button type="button" class="set-link" data-act="color">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 0 0 16 2 2 0 0 0 1.6-3.2c-.3-.5-.1-1 .4-1.2H16a4 4 0 0 0 4-4 7 7 0 0 0-8-7.6Z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.2" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="8" r="1" fill="currentColor"/><circle cx="15.5" cy="10.2" r="1" fill="currentColor"/></svg>
+              Change Profile Color
+            </button>
+            <button type="button" class="set-link" data-act="photo">
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h1.1l.7-1.2h4.4L15 9H16a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 16 17H8a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 8 9Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="13" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M17 6.4v2M16 7.4h2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Change Profile Photo
+            </button>
+          </div>
+          <div class="set-card">
+            <button type="button" class="set-line" data-act="profile">
+              <span class="set-ico red" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.1" fill="#fff"/><path d="M6.2 18.2c.8-2.6 2.8-3.8 5.8-3.8s5 1.2 5.8 3.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="set-label">My Profile</span>
+              <span class="set-chev" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="set-card">
+            <button type="button" class="set-line" data-act="saved">
+              <span class="set-ico blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#fff" d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.2L6 21V4.5a1 1 0 0 1 1-1Z"/></svg></span>
+              <span class="set-label">Saved Messages</span>
+              <span class="set-chev" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="set-line" data-act="calls">
+              <span class="set-ico green" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#fff" d="M8 4.2h2.2l1.1 2.6-1.5 1a12 12 0 0 0 6.4 6.4l1-1.5 2.6 1.1V16a1.6 1.6 0 0 1-1.7 1.6A14.2 14.2 0 0 1 6.4 5.9 1.6 1.6 0 0 1 8 4.2Z"/></svg></span>
+              <span class="set-label">Recent Calls</span>
+              <span class="set-chev" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="set-line" data-act="devices">
+              <span class="set-ico orange" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="5" width="12" height="9" rx="1.4" fill="none" stroke="#fff" stroke-width="1.7"/><path d="M8 17.5h8M16 9h3.2A1.3 1.3 0 0 1 20.5 10.3v5.2" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+              <span class="set-label">Devices</span>
+              <span class="set-side">2 <span class="set-chev">›</span></span>
+            </button>
+            <button type="button" class="set-line" data-act="folders">
+              <span class="set-ico sky" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#fff" d="M3.5 7.2A1.7 1.7 0 0 1 5.2 5.5h4l1.6 1.7h8a1.7 1.7 0 0 1 1.7 1.7v8.4a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7Z"/></svg></span>
+              <span class="set-label">Chat Folders</span>
+              <span class="set-chev" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="set-line" data-act="text">
+              <span class="set-ico leaf" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="inherit">Aa</text></svg></span>
+              <span class="set-label">Text Size</span>
+              <span class="set-side"><span id="set-text-size">18</span> <span class="set-chev">›</span></span>
+            </button>
+            <button type="button" class="set-line" id="set-full" data-act="full" aria-pressed="false">
+              <span class="set-ico violet" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M20 16v4h-4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="set-label">Full Screen Mode</span>
+              <span class="switch" aria-hidden="true"><b></b></span>
+            </button>
+            <button type="button" class="set-line on" id="set-center" data-act="center" aria-pressed="true">
+              <span class="set-ico blue" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="#fff" stroke-width="1.7"/><path d="M8 10h3M8 14h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+              <span class="set-label">Show Control Center Button</span>
+              <span class="switch" aria-hidden="true"><b></b></span>
+            </button>
+            <button type="button" class="set-line" data-act="privacy">
+              <span class="set-ico gray" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24"><rect x="6" y="10" width="12" height="9" rx="1.6" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M8.5 10V8a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="set-label">Privacy and Security</span>
+              <span class="set-chev" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="set-line danger" data-act="reset">
+              <span class="set-ico red" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M8 7l.7 12h6.6L16 7" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="set-label">Reset Demo Data</span>
+            </button>
+          </div>
+          <input id="set-photo-file" type="file" accept="image/*" hidden />
+        </div>
+      </div>
+
+      <div class="edit-bar" id="edit-bar">
+        <button type="button" id="delete-chats" disabled>Delete</button>
+      </div>
+      <div class="dock">
+        <nav class="tabs" aria-label="Main">
+          <button type="button" data-tab="contacts" aria-label="Contacts">
+            <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><defs><clipPath id="contact-disc"><circle cx="12" cy="12" r="11"/></clipPath></defs><g clip-path="url(#contact-disc)"><rect width="24" height="24" fill="currentColor"/><circle cx="12" cy="8.7" r="3.35" fill="#fff"/><ellipse cx="12" cy="18.8" rx="6.6" ry="4.3" fill="#fff"/></g></svg>
+            Contacts
+          </button>
+          <button type="button" data-tab="calls" aria-label="Calls">
+            <svg class="call-ico" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.3 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .6 3.6 1 1 0 0 1-.3 1l-2.2 2.2Z"/></svg>
+            Calls
+          </button>
+          <button type="button" class="on" data-tab="chats" aria-current="page" aria-label="Chats">
+            <span class="chat-ico">
+              <svg width="32" height="28" viewBox="0 0 32 28" aria-hidden="true"><g class="b-back"><circle cx="21.5" cy="12.2" r="6.2"/><path d="M23.6 17c.8 1.5 1.8 3.1 2.5 3.8-.3-1.4.3-2.6.8-3.4.7.2 1.3-.2 1.3-.2-.9.5-2.4.3-3.6-.2z"/></g><g class="b-front"><circle cx="12.5" cy="15" r="7.6"/><path d="M7.6 20.4c-.7 1.4-1.6 3.4-.5 4.2 1.3-1.3 2.8-2.4 3.6-2.7-.8 0-2-.6-3.1-1.5z"/></g></svg>
+              <span class="tab-count" id="tab-count"></span>
+            </span>
+            Chats
+          </button>
+          <button type="button" data-tab="settings" aria-label="Settings">
+            <span class="set-face" id="set-tab-letter" aria-hidden="true">M</span>
+            Settings
+          </button>
+        </nav>
+        <button type="button" class="dock-search" id="dock-search" aria-label="Search">
+          <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15 15.2 20 20.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <section class="conversation" id="conversation" aria-hidden="true">
+      <header class="chat-header">
+        <button type="button" class="back" id="back" aria-label="Back">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.8 5.2 8 12l6.8 6.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="who">
+          <div class="avatar" id="chat-avatar" aria-hidden="true">J</div>
+          <div class="who-text">
+            <strong id="chat-name">John</strong>
+            <span class="status" id="chat-status">last seen recently</span>
+          </div>
+        </div>
+      </header>
+      <div id="thread" aria-live="polite"></div>
+      <form class="composer" id="composer">
+        <input id="msg" type="text" placeholder="Message" autocomplete="off" enterkeyhint="send" aria-label="Message" />
+        <button type="submit" id="send" aria-label="Send">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M2.2 20.6 22 12 2.2 3.4 2 10.2l13.2 1.8L2 13.8z"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <section class="new-contact" id="new-contact" aria-hidden="true">
+      <header class="chat-header nc-head">
+        <button type="button" class="back" id="nc-back" aria-label="Back">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.8 5.2 8 12l6.8 6.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1>New Contact</h1>
+      </header>
+      <form class="nc-form" id="nc-form">
+        <button type="button" class="nc-photo" id="nc-photo" aria-label="Add photo">
+          <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 9h1.1l.7-1.2h4.4L15 9H16a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 16 17H8a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 8 9Z" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <circle cx="12" cy="13" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M17.1 6.4v2M16.1 7.4h2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <img id="nc-preview" alt="" hidden />
+        </button>
+        <input id="nc-file" type="file" accept="image/*" hidden />
+        <input id="nc-name" type="text" placeholder="Name" autocomplete="name" enterkeyhint="next" aria-label="Name" />
+        <input id="nc-phone" type="tel" placeholder="Phone (optional)" autocomplete="tel" enterkeyhint="done" aria-label="Phone, optional" />
+        <button type="submit" class="nc-create">Create Contact &amp; Chat</button>
+      </form>
+    </section>
+
+    <section class="edit-profile" id="edit-profile" aria-hidden="true">
+      <header class="chat-header nc-head">
+        <button type="button" class="back" id="ep-back" aria-label="Back">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.8 5.2 8 12l6.8 6.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1>Edit Profile</h1>
+      </header>
+      <form class="nc-form" id="ep-form">
+        <label class="nc-field">Name
+          <input id="ep-name" type="text" autocomplete="name" enterkeyhint="next" aria-label="Name" />
+        </label>
+        <label class="nc-field">Username
+          <input id="ep-user" type="text" autocomplete="username" enterkeyhint="next" aria-label="Username" spellcheck="false" />
+        </label>
+        <label class="nc-field">Number
+          <input id="ep-phone" type="tel" autocomplete="tel" enterkeyhint="done" aria-label="Number" />
+        </label>
+        <button type="submit" class="nc-create">Save</button>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var HOUR = 3600000;
+      var now = Date.now();
+      var people = [
+        {
+          id: "john",
+          name: "John",
+          color: "#e17076",
+          status: "last seen recently",
+          unread: 1,
+          messages: [
+            { from: "them", text: "Hey, are you free tonight?", ts: now - 3 * HOUR },
+            { from: "me", text: "Yeah, what's up?", ts: now - 2.7 * HOUR },
+            { from: "them", text: "Want to grab food around 7?", ts: now - 12 * 60000 }
+          ]
+        },
+        {
+          id: "mary",
+          name: "Mary",
+          color: "#7bc862",
+          status: "online",
+          unread: 0,
+          messages: [
+            { from: "them", text: "Did you see the photos?", ts: now - 6 * HOUR },
+            { from: "me", text: "Not yet. Send them when you can.", ts: now - 5.4 * HOUR },
+            { from: "them", text: "On my way home. I'll share them later.", ts: now - 5 * HOUR }
+          ]
+        },
+        {
+          id: "alex",
+          name: "Alex",
+          color: "#6ec9cb",
+          status: "last seen yesterday",
+          unread: 0,
+          messages: [
+            { from: "them", text: "The file is ready.", ts: now - 26 * HOUR },
+            { from: "me", text: "Thanks, I'll check it.", ts: now - 25 * HOUR },
+            { from: "them", text: "Let me know if anything is missing.", ts: now - 24.2 * HOUR }
+          ]
+        }
+      ];
+
+      var SAVED_KEY = "telegram-clone-saved-contacts";
+
+      function loadSaved() {
+        try {
+          var raw = localStorage.getItem(SAVED_KEY);
+          if (!raw) return [];
+          var list = JSON.parse(raw);
+          if (!Array.isArray(list)) return [];
+          return list.filter(function (person) {
+            return person && person.saved && person.id && person.name;
+          });
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function saveSaved() {
+        var list = people.filter(function (person) { return person.saved; });
+        try {
+          localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+        } catch (err) {
+          try {
+            localStorage.setItem(SAVED_KEY, JSON.stringify(list.map(function (person) {
+              var copy = {};
+              for (var key in person) copy[key] = person[key];
+              copy.photo = "";
+              return copy;
+            })));
+          } catch (again) {}
+        }
+      }
+
+      loadSaved().forEach(function (person) {
+        if (!personById(person.id)) people.push(person);
+      });
+
+      var CHECKS = '<svg viewBox="0 0 18 11" width="16" height="11" aria-hidden="true"><path d="M1 6.2 4.1 9.2 10.2 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.2 6.2 9.2 9.2 16.4 1.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      var app = document.getElementById("app");
+      var home = document.getElementById("home");
+      var conversation = document.getElementById("conversation");
+      var title = document.getElementById("screen-title");
+      var chatList = document.getElementById("chat-list");
+      var contactList = document.getElementById("contact-list");
+      var search = document.getElementById("search");
+      var thread = document.getElementById("thread");
+      var composer = document.getElementById("composer");
+      var msgInput = document.getElementById("msg");
+      var chatAvatar = document.getElementById("chat-avatar");
+      var chatName = document.getElementById("chat-name");
+      var chatStatus = document.getElementById("chat-status");
+      var currentId = null;
+      var editing = false;
+      var selected = {};
+      var iconPill = document.getElementById("icon-pill");
+      var contactAdd = document.getElementById("contact-add");
+      var contactSearch = document.getElementById("contact-search");
+      var alphaIndex = document.getElementById("alpha-index");
+      var toastEl = document.getElementById("toast");
+      var toastTimer = 0;
+      var editBtn = document.getElementById("edit-btn");
+      var deleteBtn = document.getElementById("delete-chats");
+
+      var titles = {
+        contacts: "Contacts",
+        calls: "Calls",
+        chats: "Chats",
+        settings: "Settings"
+      };
+
+      function personById(id) {
+        for (var i = 0; i < people.length; i++) {
+          if (people[i].id === id) return people[i];
+        }
+        return null;
+      }
+
+      function lastMessage(person) {
+        if (!person.messages.length) return { text: person.phone || "New contact", ts: person.added || 0, from: "them" };
+        return person.messages[person.messages.length - 1];
+      }
+
+      function paintAvatar(el, person) {
+        el.style.backgroundColor = person.color;
+        if (person.photo) {
+          el.textContent = "";
+          el.style.backgroundImage = "url(\"" + person.photo + "\")";
+          el.style.backgroundSize = "cover";
+          el.style.backgroundPosition = "center";
+        } else {
+          el.style.backgroundImage = "";
+          el.textContent = person.name.charAt(0);
+        }
+      }
+
+      function startOfDay(ts) {
+        var d = new Date(ts);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      }
+
+      function formatTime(ts) {
+        return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+
+      function dayDiff(ts) {
+        return Math.round((startOfDay(Date.now()) - startOfDay(ts)) / 86400000);
+      }
+
+      function formatListTime(ts) {
+        var diff = dayDiff(ts);
+        if (diff <= 0) return formatTime(ts);
+        if (diff === 1) return "Yesterday";
+        return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" });
+      }
+
+      function formatDay(ts) {
+        var diff = dayDiff(ts);
+        if (diff <= 0) return "Today";
+        if (diff === 1) return "Yesterday";
+        return new Date(ts).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+      }
+
+      function avatar(person, extra) {
+        var el = document.createElement("div");
+        el.className = "avatar" + (extra ? " " + extra : "");
+        el.setAttribute("aria-hidden", "true");
+        paintAvatar(el, person);
+        return el;
+      }
+
+      function chatRow(person) {
+        var last = lastMessage(person);
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chat-row";
+        btn.dataset.id = person.id;
+        btn.setAttribute("role", "listitem");
+        btn.setAttribute("aria-label", editing ? "Select " + person.name : "Open chat with " + person.name);
+        if (editing) {
+          btn.classList.add("picking");
+          if (selected[person.id]) btn.classList.add("selected");
+          var mark = document.createElement("span");
+          mark.className = "check";
+          mark.setAttribute("aria-hidden", "true");
+          btn.appendChild(mark);
+        }
+
+        var main = document.createElement("span");
+        main.className = "chat-main";
+
+        var top = document.createElement("span");
+        top.className = "topline";
+        var name = document.createElement("span");
+        name.className = "name";
+        name.textContent = person.name;
+        var when = document.createElement("span");
+        when.className = "when" + (person.unread ? " hot" : "");
+        when.textContent = formatListTime(last.ts);
+        top.appendChild(name);
+        top.appendChild(when);
+
+        var bot = document.createElement("span");
+        bot.className = "botline";
+        var preview = document.createElement("span");
+        preview.className = "preview";
+        preview.textContent = last.text;
+        bot.appendChild(preview);
+        if (person.unread) {
+          var badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = String(person.unread);
+          bot.appendChild(badge);
+        }
+
+        main.appendChild(top);
+        main.appendChild(bot);
+        btn.appendChild(avatar(person));
+        btn.appendChild(main);
+        return btn;
+      }
+
+      function showToast(text) {
+        toastEl.textContent = text;
+        toastEl.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toastEl.hidden = true; }, 1700);
+      }
+
+      function inviteRow() {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "invite-row";
+        btn.setAttribute("aria-label", "Invite friends");
+        var icon = document.createElement("span");
+        icon.className = "invite-ico";
+        icon.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.8 18c.6-2.7 2.5-4 5.2-4s4.6 1.3 5.2 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M17 11v6M14 14h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+        var label = document.createElement("span");
+        label.textContent = "Invite Friends";
+        btn.appendChild(icon);
+        btn.appendChild(label);
+        btn.addEventListener("click", function () {
+          showToast("Invite link copied");
+        });
+        return btn;
+      }
+
+      function contactRow(person) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chat-row contact-row";
+        btn.dataset.id = person.id;
+        btn.setAttribute("aria-label", "Message " + person.name);
+        var main = document.createElement("span");
+        main.className = "chat-main";
+        var name = document.createElement("span");
+        name.className = "name";
+        name.textContent = person.name;
+        var sub = document.createElement("span");
+        sub.className = "sub" + (person.status === "online" ? " online" : "");
+        sub.textContent = person.status;
+        main.appendChild(name);
+        main.appendChild(sub);
+        btn.appendChild(avatar(person));
+        btn.appendChild(main);
+        return btn;
+      }
+
+      function unreadTotal() {
+        var n = 0;
+        for (var i = 0; i < people.length; i++) n += people[i].unread || 0;
+        return n;
+      }
+
+      function updateBadge() {
+        var n = unreadTotal();
+        var tabCount = document.getElementById("tab-count");
+        tabCount.textContent = n ? String(n) : "";
+        tabCount.classList.toggle("show", n > 0);
+        var chatsTab = document.querySelector('[data-tab="chats"]');
+        if (n) chatsTab.setAttribute("aria-label", "Chats, " + n + " unread");
+        else chatsTab.setAttribute("aria-label", "Chats");
+      }
+
+      function renderList() {
+        var q = search.value.trim().toLowerCase();
+        var rows = people.filter(function (p) {
+          return p.name.toLowerCase().indexOf(q) !== -1;
+        });
+        rows.sort(function (a, b) { return lastMessage(b).ts - lastMessage(a).ts; });
+        chatList.replaceChildren();
+        if (!rows.length) {
+          var empty = document.createElement("p");
+          empty.className = "empty";
+          empty.textContent = "No results";
+          chatList.appendChild(empty);
+        } else {
+          rows.forEach(function (p) { chatList.appendChild(chatRow(p)); });
+        }
+        updateBadge();
+      }
+
+      function renderContacts() {
+        var q = contactSearch.value.trim().toLowerCase();
+        var rows = people.slice().sort(function (a, b) {
+          return a.name.localeCompare(b.name);
+        });
+        if (q) {
+          rows = rows.filter(function (p) {
+            return p.name.toLowerCase().indexOf(q) !== -1;
+          });
+        }
+        contactList.replaceChildren();
+        alphaIndex.replaceChildren();
+        if (!q) contactList.appendChild(inviteRow());
+        if (!rows.length) {
+          var empty = document.createElement("p");
+          empty.className = "empty";
+          empty.textContent = "No results";
+          contactList.appendChild(empty);
+          return;
+        }
+        var letter = "";
+        var letters = [];
+        rows.forEach(function (person) {
+          var next = person.name.charAt(0).toUpperCase();
+          if (next !== letter) {
+            letter = next;
+            letters.push(letter);
+            var head = document.createElement("div");
+            head.className = "section-letter";
+            head.id = "sec-" + letter;
+            head.textContent = letter;
+            contactList.appendChild(head);
+          }
+          contactList.appendChild(contactRow(person));
+        });
+        letters.forEach(function (item) {
+          var jump = document.createElement("button");
+          jump.type = "button";
+          jump.textContent = item;
+          jump.setAttribute("aria-label", "Jump to " + item);
+          jump.addEventListener("click", function () {
+            var target = document.getElementById("sec-" + item);
+            if (target) target.scrollIntoView({ block: "start" });
+          });
+          alphaIndex.appendChild(jump);
+        });
+      }
+
+      function renderThread(person) {
+        thread.replaceChildren();
+        var prevDay = "";
+        var prevFrom = "";
+        person.messages.forEach(function (m, index) {
+          var day = formatDay(m.ts);
+          if (day !== prevDay) {
+            var chip = document.createElement("div");
+            chip.className = "day";
+            chip.textContent = day;
+            thread.appendChild(chip);
+            prevDay = day;
+            prevFrom = "";
+          }
+          var row = document.createElement("div");
+          row.className = "msg " + (m.from === "me" ? "out" : "in") + (prevFrom === m.from ? " grouped" : "");
+          var bubble = document.createElement("div");
+          bubble.className = "bubble";
+          var text = document.createElement("span");
+          text.className = "text";
+          text.textContent = m.text;
+          var meta = document.createElement("span");
+          meta.className = "meta";
+          var time = document.createElement("span");
+          time.textContent = formatTime(m.ts);
+          meta.appendChild(time);
+          if (m.from === "me") {
+            var ticks = document.createElement("span");
+            ticks.className = "ticks";
+            ticks.innerHTML = CHECKS;
+            meta.appendChild(ticks);
+          }
+          bubble.appendChild(text);
+          bubble.appendChild(meta);
+          row.appendChild(bubble);
+          thread.appendChild(row);
+          prevFrom = m.from;
+        });
+      }
+
+      function scrollToEnd() {
+        requestAnimationFrame(function () {
+          thread.scrollTop = thread.scrollHeight;
+        });
+      }
+
+      function showChat(id, fromHistory) {
+        var person = personById(id);
+        if (!person) return;
+        currentId = id;
+        person.unread = 0;
+        if (person.saved) saveSaved();
+        paintAvatar(chatAvatar, person);
+        chatName.textContent = person.name;
+        chatStatus.textContent = person.status;
+        chatStatus.classList.toggle("online", person.status === "online");
+        renderThread(person);
+        renderList();
+        app.classList.add("open");
+        conversation.setAttribute("aria-hidden", "false");
+        home.setAttribute("aria-hidden", "true");
+        document.title = person.name;
+        if (!fromHistory) history.pushState({ chat: id }, "");
+        scrollToEnd();
+      }
+
+      function showList() {
+        currentId = null;
+        app.classList.remove("open");
+        conversation.setAttribute("aria-hidden", "true");
+        home.setAttribute("aria-hidden", "false");
+        msgInput.value = "";
+        var active = document.querySelector(".tabs button.on");
+        document.title = active ? titles[active.dataset.tab] : "Chats";
+        renderList();
+      }
+
+      function showTab(name) {
+        var panels = document.querySelectorAll(".panel");
+        var tabs = document.querySelectorAll(".tabs button");
+        panels.forEach(function (panel) {
+          panel.classList.toggle("on", panel.dataset.panel === name);
+        });
+        tabs.forEach(function (tab) {
+          var on = tab.dataset.tab === name;
+          tab.classList.toggle("on", on);
+          if (on) tab.setAttribute("aria-current", "page");
+          else tab.removeAttribute("aria-current");
+        });
+        title.textContent = titles[name];
+        var onChats = name === "chats";
+        editBtn.hidden = !onChats;
+        iconPill.hidden = !onChats;
+        contactAdd.hidden = name !== "contacts";
+        home.classList.toggle("setmode", name === "settings");
+        if (!onChats && editing) setEditing(false);
+        if (!currentId) document.title = titles[name];
+      }
+
+      var setAvatar = document.getElementById("set-avatar");
+      var setEmoji = document.getElementById("set-emoji");
+      var setTextSize = document.getElementById("set-text-size");
+      var setPhotoFile = document.getElementById("set-photo-file");
+      var profileFills = [
+        "linear-gradient(160deg, #ffe27a 0%, #ffb15a 52%, #ff8a4c 100%)",
+        "linear-gradient(160deg, #8fd4ff 0%, #3390ec 100%)",
+        "linear-gradient(160deg, #b6f3a4 0%, #34c759 100%)",
+        "linear-gradient(160deg, #e2c4ff 0%, #9b4dff 100%)"
+      ];
+      var profileIndex = 0;
+      var emojiMarks = ["", "😊", "🔥", "⭐", "💼"];
+      var emojiIndex = 0;
+      var textSizes = [16, 18, 20, 22];
+      var textIndex = 1;
+
+      document.getElementById("panel-settings").addEventListener("click", function (event) {
+        var btn = event.target.closest("[data-act]");
+        if (!btn) return;
+        var act = btn.dataset.act;
+        if (act === "emoji") {
+          emojiIndex = (emojiIndex + 1) % emojiMarks.length;
+          setEmoji.textContent = emojiMarks[emojiIndex];
+          showToast(emojiMarks[emojiIndex] ? "Emoji status " + emojiMarks[emojiIndex] : "Emoji status cleared");
+        } else if (act === "color") {
+          profileIndex = (profileIndex + 1) % profileFills.length;
+          setAvatar.style.backgroundImage = "";
+          setAvatar.style.background = profileFills[profileIndex];
+          if (!profilePhoto) setAvatar.textContent = initials(profile.name);
+          showToast("Profile color updated");
+        } else if (act === "photo") {
+          setPhotoFile.click();
+        } else if (act === "profile") {
+          showToast(profile.name + " · " + profileLine());
+        } else if (act === "saved") {
+          showToast("No saved messages");
+        } else if (act === "calls") {
+          showTab("calls");
+        } else if (act === "devices") {
+          showToast("2 devices");
+        } else if (act === "folders") {
+          showToast("No chat folders");
+        } else if (act === "text") {
+          textIndex = (textIndex + 1) % textSizes.length;
+          setTextSize.textContent = String(textSizes[textIndex]);
+          showToast("Text size " + textSizes[textIndex]);
+        } else if (act === "full") {
+          var goingOn = !btn.classList.contains("on");
+          btn.classList.toggle("on", goingOn);
+          btn.setAttribute("aria-pressed", goingOn ? "true" : "false");
+          if (goingOn) {
+            var root = document.documentElement;
+            if (root.requestFullscreen) root.requestFullscreen().catch(function () {});
+          } else if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen();
+          }
+        } else if (act === "center") {
+          var centerOn = !btn.classList.contains("on");
+          btn.classList.toggle("on", centerOn);
+          btn.setAttribute("aria-pressed", centerOn ? "true" : "false");
+        } else if (act === "privacy") {
+          showToast("Privacy and security");
+        } else if (act === "reset") {
+          try { localStorage.removeItem(SAVED_KEY); } catch (err) {}
+          location.reload();
+        }
+      });
+
+      document.getElementById("set-qr").addEventListener("click", function () {
+        showToast("QR code");
+      });
+      var profile = {
+        name: "MTT Analysis",
+        user: "mtt_analysis",
+        phone: "+233 53 182 8096"
+      };
+      var profilePhoto = false;
+      var setNameEl = document.getElementById("set-name");
+      var setSubEl = document.getElementById("set-sub");
+      var epName = document.getElementById("ep-name");
+      var epUser = document.getElementById("ep-user");
+      var epPhone = document.getElementById("ep-phone");
+      var editProfile = document.getElementById("edit-profile");
+
+      function initials(name) {
+        var parts = name.trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return "";
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+      }
+
+      function profileLine() {
+        var user = "@" + profile.user;
+        return profile.phone ? profile.phone + " · " + user : user;
+      }
+
+      function paintProfile() {
+        setNameEl.textContent = profile.name;
+        setSubEl.textContent = profileLine();
+        document.getElementById("set-tab-letter").textContent = profile.name.trim().charAt(0).toUpperCase();
+        if (!profilePhoto) setAvatar.textContent = initials(profile.name);
+      }
+
+      function showEditProfile() {
+        epName.value = profile.name;
+        epUser.value = profile.user;
+        epPhone.value = profile.phone;
+        app.classList.add("profile");
+        editProfile.setAttribute("aria-hidden", "false");
+        home.setAttribute("aria-hidden", "true");
+        document.title = "Edit Profile";
+        setTimeout(function () { epName.focus(); }, 280);
+      }
+
+      function hideEditProfile() {
+        app.classList.remove("profile");
+        editProfile.setAttribute("aria-hidden", "true");
+        if (!currentId) {
+          home.setAttribute("aria-hidden", "false");
+          var active = document.querySelector(".tabs button.on");
+          document.title = active ? titles[active.dataset.tab] : "Chats";
+        }
+      }
+
+      document.getElementById("set-edit").addEventListener("click", showEditProfile);
+      document.getElementById("ep-back").addEventListener("click", hideEditProfile);
+      document.getElementById("ep-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var name = epName.value.trim();
+        var user = epUser.value.trim().replace(/^@+/, "").replace(/\s+/g, "");
+        var phone = epPhone.value.trim();
+        if (!name) {
+          epName.focus();
+          return;
+        }
+        if (!user) {
+          epUser.focus();
+          return;
+        }
+        profile.name = name;
+        profile.user = user;
+        profile.phone = phone;
+        paintProfile();
+        hideEditProfile();
+        showToast("Profile updated");
+      });
+      setPhotoFile.addEventListener("change", function () {
+        var file = setPhotoFile.files && setPhotoFile.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          profilePhoto = true;
+          setAvatar.textContent = "";
+          setAvatar.style.background = "center / cover no-repeat url(\"" + reader.result + "\")";
+        };
+        reader.readAsDataURL(file);
+      });
+
+      function selectedCount() {
+        var n = 0;
+        for (var key in selected) if (selected[key]) n += 1;
+        return n;
+      }
+
+      function updateDelete() {
+        var n = selectedCount();
+        deleteBtn.disabled = n === 0;
+        deleteBtn.textContent = n ? "Delete (" + n + ")" : "Delete";
+      }
+
+      function setEditing(on) {
+        editing = on;
+        if (!on) selected = {};
+        app.classList.toggle("editing", on);
+        editBtn.textContent = on ? "Done" : "Edit";
+        editBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        updateDelete();
+        renderList();
+      }
+
+      editBtn.addEventListener("click", function () {
+        setEditing(!editing);
+      });
+
+      deleteBtn.addEventListener("click", function () {
+        if (!selectedCount()) return;
+        people = people.filter(function (person) { return !selected[person.id]; });
+        selected = {};
+        saveSaved();
+        updateDelete();
+        renderContacts();
+        renderList();
+      });
+
+      var newContact = document.getElementById("new-contact");
+      var ncName = document.getElementById("nc-name");
+      var ncPhone = document.getElementById("nc-phone");
+      var ncPhoto = document.getElementById("nc-photo");
+      var ncFile = document.getElementById("nc-file");
+      var ncPreview = document.getElementById("nc-preview");
+      var photoData = "";
+      var contactColors = ["#e17076", "#7bc862", "#6ec9cb", "#e5ca77", "#a695e7", "#ee7aae"];
+
+      function resetNewContact() {
+        photoData = "";
+        ncName.value = "";
+        ncPhone.value = "";
+        ncFile.value = "";
+        ncPreview.hidden = true;
+        ncPreview.removeAttribute("src");
+        ncPhoto.classList.remove("has");
+      }
+
+      function showNewContact() {
+        resetNewContact();
+        app.classList.add("adding");
+        newContact.setAttribute("aria-hidden", "false");
+        home.setAttribute("aria-hidden", "true");
+        document.title = "New Contact";
+        setTimeout(function () { ncName.focus(); }, 280);
+      }
+
+      function hideNewContact() {
+        app.classList.remove("adding");
+        newContact.setAttribute("aria-hidden", "true");
+        if (!currentId) {
+          home.setAttribute("aria-hidden", "false");
+          var active = document.querySelector(".tabs button.on");
+          document.title = active ? titles[active.dataset.tab] : "Chats";
+        }
+      }
+
+      document.getElementById("add-btn").addEventListener("click", showNewContact);
+      document.getElementById("nc-back").addEventListener("click", hideNewContact);
+      ncPhoto.addEventListener("click", function () { ncFile.click(); });
+      ncFile.addEventListener("change", function () {
+        var file = ncFile.files && ncFile.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          photoData = String(reader.result || "");
+          ncPreview.src = photoData;
+          ncPreview.hidden = false;
+          ncPhoto.classList.add("has");
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById("nc-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var name = ncName.value.trim();
+        if (!name) {
+          ncName.focus();
+          return;
+        }
+        var phone = ncPhone.value.trim();
+        var person = {
+          id: "c" + Date.now(),
+          name: name,
+          color: contactColors[people.length % contactColors.length],
+          status: "last seen recently",
+          phone: phone,
+          photo: photoData,
+          unread: 0,
+          added: Date.now(),
+          saved: true,
+          messages: []
+        };
+        people.push(person);
+        saveSaved();
+        renderContacts();
+        renderList();
+        hideNewContact();
+        showTab("chats");
+        showChat(person.id);
+      });
+
+      contactAdd.addEventListener("click", function () {
+        contactSearch.focus();
+        showToast("Search a name to start a chat");
+      });
+
+      contactSearch.addEventListener("input", renderContacts);
+
+      document.getElementById("compose-btn").addEventListener("click", function () {
+        showTab("chats");
+        search.focus();
+      });
+
+      chatList.addEventListener("click", function (event) {
+        var btn = event.target.closest("[data-id]");
+        if (!btn) return;
+        if (editing) {
+          if (selected[btn.dataset.id]) delete selected[btn.dataset.id];
+          else selected[btn.dataset.id] = true;
+          updateDelete();
+          renderList();
+          return;
+        }
+        showChat(btn.dataset.id);
+      });
+
+      contactList.addEventListener("click", function (event) {
+        var btn = event.target.closest("[data-id]");
+        if (btn) showChat(btn.dataset.id);
+      });
+
+      document.querySelector(".tabs").addEventListener("click", function (event) {
+        var tab = event.target.closest("[data-tab]");
+        if (tab) showTab(tab.dataset.tab);
+      });
+
+      document.getElementById("dock-search").addEventListener("click", function () {
+        var active = document.querySelector(".tabs button.on");
+        var name = active ? active.dataset.tab : "chats";
+        if (name === "contacts") {
+          contactSearch.focus();
+          return;
+        }
+        showTab("chats");
+        search.focus();
+      });
+
+      search.addEventListener("input", renderList);
+
+      document.getElementById("back").addEventListener("click", function () {
+        if (history.state && history.state.chat) history.back();
+        else showList();
+      });
+
+      window.addEventListener("popstate", function (event) {
+        var id = event.state && event.state.chat;
+        if (id) showChat(id, true);
+        else if (currentId) showList();
+      });
+
+      composer.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var text = msgInput.value.trim();
+        if (!text || !currentId) return;
+        var person = personById(currentId);
+        person.messages.push({ from: "me", text: text, ts: Date.now() });
+        if (person.saved) saveSaved();
+        msgInput.value = "";
+        renderThread(person);
+        renderList();
+        scrollToEnd();
+        msgInput.focus();
+      });
+
+      var PHONE_W = 440;
+      var PHONE_H = 956;
+
+      function fitViewport() {
+        var vv = window.visualViewport;
+        var viewW = window.innerWidth;
+        var viewH = vv ? vv.height : window.innerHeight;
+        var offsetTop = vv ? vv.offsetTop : 0;
+        var w = Math.min(PHONE_W, viewW);
+        var h = Math.min(PHONE_H, viewH);
+        app.style.width = w + "px";
+        app.style.height = h + "px";
+        app.style.left = Math.round((viewW - w) / 2) + "px";
+        app.style.top = Math.round(offsetTop + (viewH - h) / 2) + "px";
+        app.style.right = "auto";
+        app.style.transform = "none";
+        if (currentId) scrollToEnd();
+      }
+
+      if (window.visualViewport) {
+        visualViewport.addEventListener("resize", fitViewport);
+        visualViewport.addEventListener("scroll", fitViewport);
+      }
+      window.addEventListener("resize", fitViewport);
+      fitViewport();
+
+      history.replaceState({ chat: null }, "");
+      renderContacts();
+      renderList();
+    })();
+  </script>
+</body>
+</html>
