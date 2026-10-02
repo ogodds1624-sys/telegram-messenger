@@ -210,8 +210,16 @@
       background: #fff;
     }
 
-    .header h1 {
+    .title-wrap {
       grid-column: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .header h1 {
       margin: 0;
       text-align: center;
       font-size: 17px;
@@ -220,9 +228,31 @@
       letter-spacing: -0.3px;
     }
 
-    .edit-btn {
+    .header-left {
       grid-column: 1;
       justify-self: start;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .head-profile {
+      position: relative;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      padding: 0;
+      flex: 0 0 34px;
+      font-size: 15px;
+    }
+
+    .head-letter { line-height: 1; }
+
+    .head-profile:active { filter: brightness(0.95); }
+    .head-profile[hidden] { display: none; }
+
+    .edit-btn {
       height: 34px;
       padding: 0 14px;
       border: 1px solid #e4e4e8;
@@ -618,10 +648,15 @@
 
     .set-hero { text-align: center; padding: 10px 8px 18px; }
 
+    .set-avatar-wrap {
+      position: relative;
+      width: 112px;
+      margin: 0 auto 12px;
+    }
+
     .set-avatar {
       width: 112px;
       height: 112px;
-      margin: 0 auto 12px;
       border-radius: 50%;
       display: grid;
       place-items: center;
@@ -642,8 +677,42 @@
       letter-spacing: -0.4px;
     }
 
-    .set-star { color: var(--blue); font-size: 18px; line-height: 1; }
     .set-emoji { font-size: 22px; }
+
+    .verify {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 22px;
+      display: inline-grid;
+    }
+
+    .verify svg { width: 100%; height: 100%; display: block; }
+
+    .verify-photo {
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      width: 28px;
+      height: 28px;
+      flex: none;
+      padding: 2px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .title-name {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .verify-mini {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+    }
+
+    .verify-mini[hidden] { display: none; }
 
     .set-sub {
       margin: 6px 0 0;
@@ -1035,8 +1104,18 @@
   <div class="app" id="app">
     <section class="home" id="home">
       <header class="header">
-        <button type="button" class="edit-btn" id="edit-btn" aria-pressed="false">Edit</button>
-        <h1 id="screen-title">Chats</h1>
+        <div class="header-left">
+          <button type="button" class="edit-btn" id="edit-btn" aria-pressed="false">Edit</button>
+        </div>
+        <div class="title-wrap">
+          <button type="button" class="set-face head-profile" id="set-tab-letter" aria-label="Settings">
+            <span class="head-letter">M</span>
+          </button>
+          <span class="title-name">
+            <span class="verify verify-mini" id="chat-badge" aria-label="Verified"><svg viewBox="0 0 24 24"><path fill="#3390ec" d="M12 1.2 14.2 2.8l2.6-.5 1.1 2.4 2.4 1.1-.5 2.6L21.8 12l-2 2.2.5 2.6-2.4 1.1-1.1 2.4-2.6-.5L12 22.8l-2.2-2-2.6.5-1.1-2.4-2.4-1.1.5-2.6L2.2 12l2-2.2-.5-2.6 2.4-1.1 1.1-2.4 2.6.5z"/><path fill="#fff" d="M10.6 15.4 7.4 12.2l1.4-1.4 1.8 1.8 4.6-4.6 1.4 1.4z"/></svg></span>
+            <h1 id="screen-title">Chats</h1>
+          </span>
+        </div>
         <div class="icon-pill" id="icon-pill">
           <button type="button" id="add-btn" aria-label="Add contact">
             <svg width="23" height="23" viewBox="0 0 24 24" aria-hidden="true">
@@ -1099,8 +1178,11 @@
             <button type="button" class="set-edit" id="set-edit">Edit</button>
           </div>
           <div class="set-hero">
-            <div class="set-avatar" id="set-avatar" aria-hidden="true">MA</div>
-            <h2><span id="set-name">MTT Analysis</span> <span class="set-emoji" id="set-emoji"></span><span class="set-star" aria-hidden="true">★</span></h2>
+            <div class="set-avatar-wrap">
+              <div class="set-avatar" id="set-avatar" aria-hidden="true">MA</div>
+              <span class="verify verify-photo" aria-label="Verified"><svg viewBox="0 0 24 24"><path fill="#3390ec" d="M12 1.2 14.2 2.8l2.6-.5 1.1 2.4 2.4 1.1-.5 2.6L21.8 12l-2 2.2.5 2.6-2.4 1.1-1.1 2.4-2.6-.5L12 22.8l-2.2-2-2.6.5-1.1-2.4-2.4-1.1.5-2.6L2.2 12l2-2.2-.5-2.6 2.4-1.1 1.1-2.4 2.6.5z"/><path fill="#fff" d="M10.6 15.4 7.4 12.2l1.4-1.4 1.8 1.8 4.6-4.6 1.4 1.4z"/></svg></span>
+            </div>
+            <h2><span id="set-name">MTT Analysis</span> <span class="set-emoji" id="set-emoji"></span><span class="verify" aria-label="Verified"><svg viewBox="0 0 24 24"><path fill="#3390ec" d="M12 1.2 14.2 2.8l2.6-.5 1.1 2.4 2.4 1.1-.5 2.6L21.8 12l-2 2.2.5 2.6-2.4 1.1-1.1 2.4-2.6-.5L12 22.8l-2.2-2-2.6.5-1.1-2.4-2.4-1.1.5-2.6L2.2 12l2-2.2-.5-2.6 2.4-1.1 1.1-2.4 2.6.5z"/><path fill="#fff" d="M10.6 15.4 7.4 12.2l1.4-1.4 1.8 1.8 4.6-4.6 1.4 1.4z"/></svg></span></h2>
             <p class="set-sub" id="set-sub">+233 53 182 8096 · @mtt_analysis</p>
           </div>
           <div class="set-card">
@@ -1193,10 +1275,6 @@
               <span class="tab-count" id="tab-count"></span>
             </span>
             Chats
-          </button>
-          <button type="button" data-tab="settings" aria-label="Settings">
-            <span class="set-face" id="set-tab-letter" aria-hidden="true">M</span>
-            Settings
           </button>
         </nav>
         <button type="button" class="dock-search" id="dock-search" aria-label="Search">
@@ -1378,6 +1456,8 @@
       var toastEl = document.getElementById("toast");
       var toastTimer = 0;
       var editBtn = document.getElementById("edit-btn");
+      var headProfile = document.getElementById("set-tab-letter");
+      var chatBadge = document.getElementById("chat-badge");
       var deleteBtn = document.getElementById("delete-chats");
 
       var titles = {
@@ -1719,6 +1799,8 @@
         title.textContent = titles[name];
         var onChats = name === "chats";
         editBtn.hidden = !onChats;
+        headProfile.hidden = !onChats;
+        chatBadge.hidden = !onChats;
         iconPill.hidden = !onChats;
         contactAdd.hidden = name !== "contacts";
         home.classList.toggle("setmode", name === "settings");
@@ -1794,6 +1876,10 @@
         }
       });
 
+      document.getElementById("set-tab-letter").addEventListener("click", function () {
+        showTab("settings");
+      });
+
       document.getElementById("set-qr").addEventListener("click", function () {
         showToast("QR code");
       });
@@ -1825,7 +1911,7 @@
       function paintProfile() {
         setNameEl.textContent = profile.name;
         setSubEl.textContent = profileLine();
-        document.getElementById("set-tab-letter").textContent = profile.name.trim().charAt(0).toUpperCase();
+        document.querySelector("#set-tab-letter .head-letter").textContent = profile.name.trim().charAt(0).toUpperCase();
         if (!profilePhoto) setAvatar.textContent = initials(profile.name);
       }
 
