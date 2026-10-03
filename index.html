@@ -980,10 +980,16 @@
     .chat-float .back svg { flex: 0 0 auto; }
 
     .back-count {
-      font-size: 16px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      background: #111;
+      color: #fff;
+      font-size: 13px;
       font-weight: 700;
-      line-height: 1;
-      color: #111;
+      line-height: 18px;
+      text-align: center;
       letter-spacing: -0.3px;
     }
 
@@ -1254,6 +1260,8 @@
       background: #e5e5ea;
       color: #1c1c1e;
     }
+
+    .cc-field::placeholder { color: #8e8e93; }
 
     .cc-chips button {
       min-height: 40px;
@@ -1602,8 +1610,13 @@
           <button type="button">last seen recently</button>
           <button type="button">last seen yesterday at 12:55 PM</button>
         </div>
-        <input class="cc-field" id="cc-day" type="text" aria-label="Day label" />
-        <input class="cc-field" id="cc-note" type="text" aria-label="Note" />
+        <input class="cc-field" id="cc-day" type="text" aria-label="Date label" placeholder="June 24" />
+        <div class="cc-chips" id="cc-days">
+          <button type="button">Today</button>
+          <button type="button">Yesterday</button>
+          <button type="button" id="cc-date-chip">June 24</button>
+        </div>
+        <input class="cc-field" id="cc-note" type="text" inputmode="numeric" aria-label="Unread messages" placeholder="Unread" />
         <button type="button" class="cc-apply" id="cc-apply">Apply Settings</button>
         <h2>Wallpaper</h2>
         <div class="cc-walls" id="cc-walls">
@@ -1961,7 +1974,7 @@
 
       function unreadTotal() {
         var n = 0;
-        for (var i = 0; i < people.length; i++) n += people[i].unread || 0;
+        for (var i = 0; i < people.length; i++) n += (people[i].unread || 0) + (people[i].extraUnread || 0);
         return n;
       }
 
@@ -2050,7 +2063,7 @@
         var prevFrom = "";
         person.messages.forEach(function (m, index) {
           var day = formatDay(m.ts);
-          if (person.dayLabel && day === "Today") day = person.dayLabel;
+          if (m.from !== "me" && person.dayLabel) day = person.dayLabel;
           if (day !== prevDay) {
             var chip = document.createElement("div");
             chip.className = "day";
@@ -2507,8 +2520,9 @@
         document.getElementById("cc-send-name").textContent = person.name;
         document.getElementById("cc-reply").value = "";
         document.getElementById("cc-status").value = person.status || "";
+        document.getElementById("cc-date-chip").textContent = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric" });
         document.getElementById("cc-day").value = person.dayLabel || "Today";
-        document.getElementById("cc-note").value = person.note || "";
+        document.getElementById("cc-note").value = person.extraUnread ? String(person.extraUnread) : "";
         document.getElementById("cc-hide").textContent = "Hide Control Center Button";
         paintChatWall(person);
         document.getElementById("cc-scroll").scrollTop = 0;
@@ -2537,6 +2551,12 @@
         document.getElementById("cc-status").value = btn.textContent;
       });
 
+      document.getElementById("cc-days").addEventListener("click", function (event) {
+        var btn = event.target.closest("button");
+        if (!btn) return;
+        document.getElementById("cc-day").value = btn.textContent;
+      });
+
       document.getElementById("cc-send").addEventListener("click", function () {
         var person = personById(currentId);
         var text = document.getElementById("cc-reply").value.trim();
@@ -2556,7 +2576,9 @@
         var status = document.getElementById("cc-status").value.trim();
         if (status) person.status = status;
         person.dayLabel = document.getElementById("cc-day").value.trim();
-        person.note = document.getElementById("cc-note").value.trim();
+        var unreadText = document.getElementById("cc-note").value.trim();
+        var unreadCount = parseInt(unreadText, 10);
+        person.extraUnread = unreadText !== "" && !isNaN(unreadCount) && unreadCount > 0 ? unreadCount : 0;
         chatStatus.textContent = person.status;
         chatStatus.classList.toggle("online", person.status === "online");
         if (person.saved) saveSaved();
